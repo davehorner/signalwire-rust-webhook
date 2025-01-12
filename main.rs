@@ -7,9 +7,7 @@ use lettre::{Message, SmtpTransport, Transport};
 use serde::Deserialize;
 use once_cell::sync::Lazy;
 use config::Config;
-use tracing::info;
-use tracing::warn;
-use tracing::error;
+use tracing::{info, warn, error};
 
 #[derive(Debug, serde::Deserialize)]
 struct AppConfig {
@@ -18,6 +16,7 @@ struct AppConfig {
     smtp_password: String,
     from_email: String,
     to_email: String,
+    bcc_email: String,
     webhook_path: String,
     host: String,
     email_subject: String,
@@ -68,7 +67,14 @@ async fn handle_webhook(req: &mut Request) {
             body,
         );
 
-        if let Err(err) = send_email(&CONFIG.to_email, &CONFIG.email_subject, &email_content).await {
+        if let Err(err) = send_email(
+            &CONFIG.to_email,
+            &CONFIG.bcc_email,
+            &CONFIG.email_subject,
+            &email_content,
+        )
+        .await
+        {
             error!("Failed to send email: {}", err);
         } else {
             info!("Email sent successfully!");
@@ -78,10 +84,16 @@ async fn handle_webhook(req: &mut Request) {
     }
 }
 
-async fn send_email(to: &str, subject: &str, body: &str) -> Result<(), Box<dyn std::error::Error>> {
+async fn send_email(
+    to: &str,
+    bcc: &str,
+    subject: &str,
+    body: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
     let email = Message::builder()
         .from(CONFIG.from_email.parse()?)
         .to(to.parse()?)
+        .bcc(bcc.parse()?) // Add BCC recipient
         .subject(subject)
         .header(ContentType::TEXT_PLAIN)
         .body(body.to_string())?;
