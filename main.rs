@@ -20,6 +20,8 @@ struct AppConfig {
     webhook_path: String,
     host: String,
     email_subject: String,
+    email_message_prefix: String,
+    account_sid: String,
 }
 
 // Global configuration loaded once
@@ -55,16 +57,28 @@ async fn handle_webhook(req: &mut Request) {
     let params: HashMap<_, _> =
         url::form_urlencoded::parse(body_str.as_bytes()).into_owned().collect();
 
+    // Extract AccountSid from params and validate it
+    if let Some(account_sid) = params.get("AccountSid") {
+        if account_sid != &CONFIG.account_sid {
+            error!(
+                "AccountSid mismatch: received {}, expected {}",
+                account_sid, CONFIG.account_sid
+            );
+            return;
+        }
+    } else {
+        error!("Missing AccountSid in request");
+        return;
+    }
+
     if let (Some(to), Some(from), Some(body)) =
         (params.get("To"), params.get("From"), params.get("Body"))
     {
         info!("To: {}, From: {}, Body: {}", to, from, body);
 
         let email_content = format!(
-            "New message received:\n\nTo: {}\nFrom: {}\nBody: {}\n",
-            to,
-            from,
-            body,
+            "{}\nTo: {}\nFrom: {}\nBody: {}",
+            CONFIG.email_message_prefix, to, from, body
         );
 
         if let Err(err) = send_email(
