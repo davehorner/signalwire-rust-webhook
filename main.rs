@@ -7,8 +7,11 @@ use lettre::{Message, SmtpTransport, Transport};
 use serde::Deserialize;
 use once_cell::sync::Lazy;
 use config::Config;
+use tracing::info;
+use tracing::warn;
+use tracing::error;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, serde::Deserialize)]
 struct AppConfig {
     smtp_relay: String,
     smtp_username: String,
@@ -35,7 +38,7 @@ async fn handle_webhook(req: &mut Request) {
     let body = match req.payload().await {
         Ok(bytes) => bytes,
         Err(err) => {
-            println!("Failed to read body: {}", err);
+            error!("Failed to read body: {}", err);
             return;
         }
     };
@@ -43,12 +46,12 @@ async fn handle_webhook(req: &mut Request) {
     let body_str = match str::from_utf8(&body) {
         Ok(s) => s,
         Err(_) => {
-            println!("Body contains invalid UTF-8 data");
+            error!("Body contains invalid UTF-8 data");
             return;
         }
     };
 
-    println!("Body: {}", body_str);
+    info!("Body: {}", body_str);
 
     let params: HashMap<_, _> =
         url::form_urlencoded::parse(body_str.as_bytes()).into_owned().collect();
@@ -56,7 +59,7 @@ async fn handle_webhook(req: &mut Request) {
     if let (Some(to), Some(from), Some(body)) =
         (params.get("To"), params.get("From"), params.get("Body"))
     {
-        println!("To: {}, From: {}, Body: {}", to, from, body);
+        info!("To: {}, From: {}, Body: {}", to, from, body);
 
         let email_content = format!(
             "New message received:\n\nTo: {}\nFrom: {}\nBody: {}\n",
@@ -66,12 +69,12 @@ async fn handle_webhook(req: &mut Request) {
         );
 
         if let Err(err) = send_email(&CONFIG.to_email, &CONFIG.email_subject, &email_content).await {
-            println!("Failed to send email: {}", err);
+            error!("Failed to send email: {}", err);
         } else {
-            println!("Email sent successfully!");
+            info!("Email sent successfully!");
         }
     } else {
-        println!("Missing required fields: To, From, or Body");
+        warn!("Missing required fields: To, From, or Body");
     }
 }
 
@@ -99,7 +102,10 @@ async fn send_email(to: &str, subject: &str, body: &str) -> Result<(), Box<dyn s
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt().init();
+    // Initialize tracing subscriber for logging
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::INFO)
+        .init();
 
     // Define a router with a POST handler for the webhook endpoint
     let router = Router::new()
@@ -109,7 +115,7 @@ async fn main() {
     // Bind the router to a listener
     let acceptor = TcpListener::new(&CONFIG.host).bind().await;
 
-    println!(
+    info!(
         "Server running at http://{}/{}",
         CONFIG.host,
         CONFIG.webhook_path.trim_start_matches('/')
@@ -118,3 +124,4 @@ async fn main() {
     // Start the server
     Server::new(acceptor).serve(router).await;
 }
+
