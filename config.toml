@@ -1,0 +1,7 @@
+smtp_relay = "smtp.sendgrid.net"
+smtp_password = "<your api key>"
+smtp_username = "apikey"
+from_email = "verified@email_address.com"
+to_email = "yourphonenumber@msg.fi.google.com"
+webhook_path = "/webhook"
+host = "0.0.0.0:7878"
