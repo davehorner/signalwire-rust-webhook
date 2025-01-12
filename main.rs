@@ -17,6 +17,7 @@ struct AppConfig {
     to_email: String,
     webhook_path: String,
     host: String,
+    email_subject: String,
 }
 
 // Global configuration loaded once
@@ -64,7 +65,7 @@ async fn handle_webhook(req: &mut Request) {
             body,
         );
 
-        if let Err(err) = send_email(&CONFIG.to_email, "New Webhook Message", &email_content).await {
+        if let Err(err) = send_email(&CONFIG.to_email, &CONFIG.email_subject, &email_content).await {
             println!("Failed to send email: {}", err);
         } else {
             println!("Email sent successfully!");
