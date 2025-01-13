@@ -4,7 +4,6 @@ use std::str;
 use lettre::message::header::ContentType;
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{Message, SmtpTransport, Transport};
-use serde::Deserialize;
 use once_cell::sync::Lazy;
 use config::Config;
 use tracing::{info, warn, error};
