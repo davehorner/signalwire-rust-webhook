@@ -1,4 +1,4 @@
-webhook using salvo and lettre to send SMS messages via sendgrid.net.
+signalwire webhook using salvo and lettre to send SMS messages via sendgrid.net.
 
 Can be used with any SMTP server.
 
